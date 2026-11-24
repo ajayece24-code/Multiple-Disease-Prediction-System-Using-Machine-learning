@@ -9,6 +9,8 @@ env/
 
 # Django
 *.log
+*.sqlite3
+db.sqlite3
 
 # Environment variables / secrets
 .env

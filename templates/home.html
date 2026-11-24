@@ -2,216 +2,364 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>Heart Disease Prediction</title>
-
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
-
-<style>
-/* Base styles */
-body {
-    font-family: 'Inter', sans-serif;
-    background: linear-gradient(135deg, #0f172a, #1e293b);
-    min-height: 100vh;
-    margin: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #1e293b;
-}
-
-/* Container */
-.container {
-    background: #ffffff;
-    width: 900px;
-    max-width: 95%;
-    border-radius: 16px;
-    padding: 50px 60px;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.08);
-}
-
-/* Headings */
-h1 {
-    text-align: center;
-    margin-bottom: 12px;
-    color: #0f172a;
-    font-weight: 600;
-    font-size: 30px;
-}
-
-.subtitle {
-    text-align: center;
-    color: #64748b;
-    margin-bottom: 40px;
-    font-size: 16px;
-}
-
-/* Form grid */
-form {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 24px 28px;
-}
-
-label {
-    font-size: 14px;
-    color: #334155;
-    margin-bottom: 6px;
-    display: block;
-    font-weight: 500;
-}
-
-input, select {
-    width: 100%;
-    padding: 12px;
-    border-radius: 10px;
-    border: 1px solid #cbd5e1;
-    font-size: 14px;
-    background: #f8fafc;
-    transition: border-color 0.3s ease;
-}
-
-input:focus, select:focus {
-    outline: none;
-    border-color: #0ea5e9;
-    background: #ffffff;
-}
-
-.full {
-    grid-column: 1 / 3;
-}
-
-/* Button */
-button {
-    background: #0ea5e9;
-    color: #fff;
-    border: none;
-    padding: 16px;
-    font-size: 16px;
-    border-radius: 10px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    font-weight: 600;
-    width: 100%;
-}
-
-button:hover {
-    background: #0284c7;
-    transform: translateY(-2px);
-}
-
-/* Result card */
-.result {
-    margin-top: 40px;
-    padding: 24px;
-    border-radius: 12px;
-    background: #f9fafb;
-    border: 1px solid #e2e8f0;
-}
-
-.result h3 {
-    margin-top: 0;
-    margin-bottom: 12px;
-    font-size: 18px;
-}
-
-.success {
-    color: #16a34a;
-    font-weight: 600;
-}
-
-.danger {
-    color: #dc2626;
-    font-weight: 600;
-}
-
-/* Links section */
-.links {
-    margin-top: 40px;
-    display: flex;
-    justify-content: space-between;
-    border-top: 1px solid #e2e8f0;
-    padding-top: 20px;
-}
-
-.links a {
-    text-decoration: none;
-    color: #0ea5e9;
-    font-weight: 500;
-    transition: color 0.3s ease;
-}
-
-.links a:hover {
-    color: #0284c7;
-}
-
-/* Responsive */
-@media (max-width: 768px) {
-    form {
-        grid-template-columns: 1fr;
-    }
-    .full {
-        grid-column: 1;
-    }
-    .container {
-        padding: 30px 20px;
-    }
-}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Heart Screening Dashboard | CardioScreen AI</title>
+    <link rel="stylesheet" href="{% static 'style.css' %}">
 </head>
+<body class="app-bg">
 
-<body>
-<div class="container">
+<nav class="navbar">
+    <div class="navbar-inner">
+        <a href="{% url 'home' %}" class="brand">
+            <span class="dot"></span>
+            <span>CardioScreen AI</span>
+        </a>
+        <div class="nav-links">
+            <span class="user-pill">Signed in: <strong>{{ request.user.username }}</strong></span>
+            <a href="{% url 'home' %}" class="active">Screening</a>
+            <a href="{% url 'chatbot' %}">Health Assistant</a>
+            <a href="{% url 'logout' %}">Logout</a>
+        </div>
+    </div>
+</nav>
 
-    <!-- Hero Section -->
-    <h1>❤️ Heart Disease Prediction</h1>
-    <p class="subtitle">AI-based early heart risk assessment</p>
+<main class="page-wrapper">
 
-    <!-- Form Section -->
-    <form method="POST">
+    <header class="dashboard-header">
+        <div>
+            <h1>Heart Health Screening Dashboard</h1>
+            <p>Answer simple everyday questions or enter full clinical measurements. Missing hospital test reports are safely handled without inventing fake numbers.</p>
+        </div>
+        <div class="header-actions">
+            <button type="button" class="speak-btn" id="speak-page-btn">🔊 Read Guide Aloud</button>
+            <button type="button" class="speak-btn" id="stop-speak-btn">⏹ Stop Audio</button>
+        </div>
+    </header>
+
+    <div class="alert alert-disclaimer" role="note">
+        <strong>Medical Screening Disclaimer:</strong> This tool estimates statistical heart risk patterns for early screening and awareness only. It is <strong>not</strong> a medical diagnosis. If you have severe chest pain, trouble breathing, or fainting, seek emergency care immediately.
+    </div>
+
+    {% if validation_errors %}
+    <div class="alert alert-danger" role="alert">
+        <strong>Please check your entries:</strong>
+        <ul>
+            {% for err in validation_errors %}
+            <li>{{ err }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    {% if result %}
+    <section class="result-grid" aria-live="polite">
+        <div class="result-card {{ risk_level }}">
+            <span class="risk-badge {{ risk_level }}">{{ risk_label }}</span>
+            <div class="risk-score">{{ risk }}%</div>
+            <p style="margin: 0 0 8px;"><strong>Assessment:</strong> {{ result }}</p>
+            <div class="progress-track">
+                <div class="progress-fill {{ risk_level }}" style="width: {{ risk }}%;"></div>
+            </div>
+            <div class="completeness-box">
+                <strong>Data Completeness:</strong> {{ provided_count }} of {{ total_fields }} fields provided ({{ completeness_pct }}%).
+                {% if imputed_labels %}
+                <br><span>Imputed from clinical dataset baseline: {{ imputed_labels|join:", " }}. Adding lab/ECG reports improves screening precision.</span>
+                {% else %}
+                <br><span>All 13 clinical parameters were provided directly.</span>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="result-card {{ risk_level }}">
+            <span class="risk-badge {{ risk_level }}">Next Steps</span>
+            <h2 style="margin: 4px 0 10px; font-size: 1.2rem;">Recommended Care Guidance</h2>
+            <p style="margin: 0 0 8px;"><strong>Suggested Specialist:</strong> {{ doctor }}</p>
+            <p style="margin: 0 0 8px;"><strong>Care Setting:</strong> {{ hospital }}</p>
+            <p style="margin: 0 0 12px; color: var(--text-1);">{{ guidance }}</p>
+            <button type="button" class="speak-btn" data-speak="Your estimated heart screening risk is {{ risk }} percent, which is {{ risk_label }}. {{ guidance }} Remember, this is a screening guide and not a medical diagnosis.">
+                🔊 Listen to Result
+            </button>
+        </div>
+    </section>
+    {% endif %}
+
+    <div class="mode-bar">
+        <div>
+            <strong>Entry Mode:</strong>
+            <span id="mode-description" class="field-help">
+                {% if mode == 'clinical' %}
+                    Showing all 13 clinical parameters openly.
+                {% else %}
+                    Guided mode highlights everyday questions and hides advanced hospital test fields unless you open them.
+                {% endif %}
+            </span>
+        </div>
+        <div class="mode-toggle" role="tablist" aria-label="Screening entry mode">
+            <button type="button" class="mode-btn {% if mode != 'clinical' %}active{% endif %}" id="btn-guided" data-mode="guided">
+                Simple &amp; Guided
+            </button>
+            <button type="button" class="mode-btn {% if mode == 'clinical' %}active{% endif %}" id="btn-clinical" data-mode="clinical">
+                Full 13-Parameter Clinical
+            </button>
+        </div>
+    </div>
+
+    <form method="POST" id="screening-form" novalidate>
         {% csrf_token %}
-        <!-- Inputs -->
-        <div><label>Age</label><input type="number" name="age" required></div>
-        <div><label>Gender</label><select name="sex"><option value="1">Male</option><option value="0">Female</option></select></div>
-        <div><label>Chest Pain Type</label><select name="cp"><option value="0">Typical Angina</option><option value="1">Atypical Angina</option><option value="2">Non-anginal Pain</option><option value="3">Asymptomatic</option></select></div>
-        <div><label>Resting Blood Pressure (mm Hg)</label><input type="number" name="trestbps" required></div>
-        <div><label>Cholesterol (mg/dl)</label><input type="number" name="chol" required></div>
-        <div><label>Fasting Blood Sugar</label><select name="fbs"><option value="0">Normal (&lt;120)</option><option value="1">High (&gt;120)</option></select></div>
-        <div><label>Resting ECG</label><select name="restecg"><option value="0">Normal</option><option value="1">ST-T abnormality</option><option value="2">Left ventricular hypertrophy</option></select></div>
-        <div><label>Maximum Heart Rate</label><input type="number" name="thalach" required></div>
-        <div><label>Exercise Induced Angina</label><select name="exang"><option value="0">No</option><option value="1">Yes</option></select></div>
-        <div><label>ST Depression (Oldpeak)</label><input type="number" step="0.1" name="oldpeak" required></div>
-        <div><label>Slope</label><select name="slope"><option value="0">Upsloping</option><option value="1">Flat</option><option value="2">Downsloping</option></select></div>
-        <div><label>Major Vessels (0-3)</label><input type="number" min="0" max="3" name="ca" required></div>
-        <div class="full"><label>Thalassemia</label><select name="thal"><option value="1">Normal</option><option value="2">Fixed Defect</option><option value="3">Reversible Defect</option></select></div>
-        <div class="full"><button type="submit">🔍 Predict Heart Risk</button></div>
+        <input type="hidden" name="mode" id="form-mode" value="{{ mode|default:'guided' }}">
+
+        <!-- Section 1: Everyday & Symptom Questions -->
+        <section class="card section-card">
+            <div class="section-header">
+                <h2>1. Everyday Profile &amp; Symptoms</h2>
+                <span class="section-badge">Required (4 questions)</span>
+            </div>
+            <div class="form-grid">
+                <div class="field">
+                    <div class="field-top">
+                        <label for="id_age">Age (years)</label>
+                        <button type="button" class="speak-btn" data-speak="Age in years. Enter a whole number between 1 and 120.">🔊 Listen</button>
+                    </div>
+                    <p class="field-help">How old is the person being screened? (1 to 120)</p>
+                    <input id="id_age" type="number" name="age" min="1" max="120" value="{{ form_values.age|default:'' }}" placeholder="e.g., 52" required>
+                </div>
+
+                <div class="field">
+                    <div class="field-top">
+                        <label for="id_sex">Biological Sex</label>
+                        <button type="button" class="speak-btn" data-speak="Biological sex. Choose Male or Female.">🔊 Listen</button>
+                    </div>
+                    <p class="field-help">Used because heart risk patterns vary by sex.</p>
+                    <select id="id_sex" name="sex">
+                        <option value="1" {% if form_values.sex == '1' or not form_values.sex %}selected{% endif %}>Male</option>
+                        <option value="0" {% if form_values.sex == '0' %}selected{% endif %}>Female</option>
+                    </select>
+                </div>
+
+                <div class="field">
+                    <div class="field-top">
+                        <label for="id_cp">Chest Pain or Discomfort</label>
+                        <button type="button" class="speak-btn" data-speak="Chest pain or discomfort. Choose whether you feel tightness during effort, unusual chest pain, non-heart chest pain, or no chest pain.">🔊 Listen</button>
+                    </div>
+                    <p class="field-help">Describe any chest tightness, pressure, or ache.</p>
+                    <select id="id_cp" name="cp">
+                        <option value="3" {% if form_values.cp == '3' or not form_values.cp %}selected{% endif %}>No chest pain (Asymptomatic)</option>
+                        <option value="0" {% if form_values.cp == '0' %}selected{% endif %}>Tightness/pressure during effort (Typical angina)</option>
+                        <option value="1" {% if form_values.cp == '1' %}selected{% endif %}>Unusual chest discomfort (Atypical angina)</option>
+                        <option value="2" {% if form_values.cp == '2' %}selected{% endif %}>Other chest ache (Non-anginal pain)</option>
+                    </select>
+                </div>
+
+                <div class="field">
+                    <div class="field-top">
+                        <label for="id_exang">Chest Pain During Walking or Exercise</label>
+                        <button type="button" class="speak-btn" data-speak="Do you get chest pain when walking briskly, climbing stairs, or exercising? Choose Yes or No.">🔊 Listen</button>
+                    </div>
+                    <p class="field-help">Does walking fast or climbing stairs trigger chest discomfort?</p>
+                    <select id="id_exang" name="exang">
+                        <option value="0" {% if form_values.exang == '0' or not form_values.exang %}selected{% endif %}>No</option>
+                        <option value="1" {% if form_values.exang == '1' %}selected{% endif %}>Yes</option>
+                    </select>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 2: Basic Checkup Vitals -->
+        <section class="card section-card">
+            <div class="section-header">
+                <h2>2. Basic Checkup Measurements (Optional if Unknown)</h2>
+                <span class="section-badge">Leave blank if no reading</span>
+            </div>
+            <div class="form-grid">
+                <div class="field">
+                    <div class="field-top">
+                        <label for="id_trestbps">Resting Blood Pressure (mm Hg)</label>
+                        <button type="button" class="speak-btn" data-speak="Resting blood pressure. Enter the top number, usually around 120. Leave blank if you have not measured it.">🔊 Listen</button>
+                    </div>
+                    <p class="field-help">Top BP number (50–260). Leave blank if not measured.</p>
+                    <input id="id_trestbps" type="number" name="trestbps" min="50" max="260" value="{{ form_values.trestbps|default:'' }}" placeholder="Unknown / No report (e.g., 125)">
+                </div>
+
+                <div class="field">
+                    <div class="field-top">
+                        <label for="id_chol">Total Cholesterol (mg/dL)</label>
+                        <button type="button" class="speak-btn" data-speak="Total cholesterol from a blood test, in milligrams per deciliter. Leave blank if you do not have a blood report.">🔊 Listen</button>
+                    </div>
+                    <p class="field-help">From a lipid blood test (50–700). Leave blank if unknown.</p>
+                    <input id="id_chol" type="number" name="chol" min="50" max="700" value="{{ form_values.chol|default:'' }}" placeholder="Unknown / No report (e.g., 210)">
+                </div>
+
+                <div class="field">
+                    <div class="field-top">
+                        <label for="id_fbs">Fasting Blood Sugar &gt; 120 mg/dL</label>
+                        <button type="button" class="speak-btn" data-speak="Is fasting blood sugar above 120 milligrams per deciliter, or do you have high blood sugar? Choose Unknown if not tested.">🔊 Listen</button>
+                    </div>
+                    <p class="field-help">Morning blood sugar before eating.</p>
+                    <select id="id_fbs" name="fbs">
+                        <option value="unknown" {% if form_values.fbs == 'unknown' or not form_values.fbs %}selected{% endif %}>Unknown / No report</option>
+                        <option value="0" {% if form_values.fbs == '0' %}selected{% endif %}>Normal (120 mg/dL or below)</option>
+                        <option value="1" {% if form_values.fbs == '1' %}selected{% endif %}>High (above 120 mg/dL)</option>
+                    </select>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 3: Advanced Hospital & ECG Tests -->
+        <section class="card section-card">
+            <details class="advanced-details" id="advanced-section" {% if mode == 'clinical' %}open{% endif %}>
+                <summary>
+                    <div class="section-header" style="margin-bottom: 12px;">
+                        <h2>3. Advanced Hospital, ECG &amp; Stress Test Reports</h2>
+                        <span class="section-badge" id="advanced-toggle-label">
+                            {% if mode == 'clinical' %}Expanded{% else %}Optional — Click to expand{% endif %}
+                        </span>
+                    </div>
+                </summary>
+                <p class="field-help" style="margin-bottom: 16px;">
+                    If you do not have ECG, treadmill stress test, or angiography reports, leave these set to <strong>Unknown / No report</strong>. The model will impute them using fitted dataset baselines rather than rejecting your screening.
+                </p>
+
+                <div class="form-grid">
+                    <div class="field">
+                        <div class="field-top">
+                            <label for="id_restecg">Resting ECG Result</label>
+                            <button type="button" class="speak-btn" data-speak="Resting ECG result from an electrocardiogram report. Choose Unknown if you do not have an ECG.">🔊 Listen</button>
+                        </div>
+                        <p class="field-help">Electrical heart tracing done at rest.</p>
+                        <select id="id_restecg" name="restecg">
+                            <option value="unknown" {% if form_values.restecg == 'unknown' or not form_values.restecg %}selected{% endif %}>Unknown / No report</option>
+                            <option value="0" {% if form_values.restecg == '0' %}selected{% endif %}>Normal</option>
+                            <option value="1" {% if form_values.restecg == '1' %}selected{% endif %}>ST-T wave abnormality</option>
+                            <option value="2" {% if form_values.restecg == '2' %}selected{% endif %}>Left ventricular hypertrophy</option>
+                        </select>
+                    </div>
+
+                    <div class="field">
+                        <div class="field-top">
+                            <label for="id_thalch">Maximum Heart Rate Achieved (thalch)</label>
+                            <button type="button" class="speak-btn" data-speak="Maximum heart rate reached during a stress test, between 40 and 250 beats per minute. Leave blank if unknown.">🔊 Listen</button>
+                        </div>
+                        <p class="field-help">Peak pulse during stress test (40–250 bpm). Leave blank if unknown.</p>
+                        <input id="id_thalch" type="number" name="thalch" min="40" max="250" value="{{ form_values.thalch|default:'' }}" placeholder="Unknown / No report (e.g., 145)">
+                    </div>
+
+                    <div class="field">
+                        <div class="field-top">
+                            <label for="id_oldpeak">ST Depression (Oldpeak)</label>
+                            <button type="button" class="speak-btn" data-speak="Oldpeak or ST depression value from an exercise ECG test. Leave blank if you do not have this number.">🔊 Listen</button>
+                        </div>
+                        <p class="field-help">ECG stress reading (-3.0 to 10.0). Leave blank if unknown.</p>
+                        <input id="id_oldpeak" type="number" step="0.1" min="-3" max="10" name="oldpeak" value="{{ form_values.oldpeak|default:'' }}" placeholder="Unknown / No report (e.g., 1.0)">
+                    </div>
+
+                    <div class="field">
+                        <div class="field-top">
+                            <label for="id_slope">Peak Exercise ST Slope</label>
+                            <button type="button" class="speak-btn" data-speak="ST segment slope from a stress ECG report. Choose Unknown if not available.">🔊 Listen</button>
+                        </div>
+                        <p class="field-help">Shape of the ST line on exercise ECG.</p>
+                        <select id="id_slope" name="slope">
+                            <option value="unknown" {% if form_values.slope == 'unknown' or not form_values.slope %}selected{% endif %}>Unknown / No report</option>
+                            <option value="0" {% if form_values.slope == '0' %}selected{% endif %}>Upsloping</option>
+                            <option value="1" {% if form_values.slope == '1' %}selected{% endif %}>Flat</option>
+                            <option value="2" {% if form_values.slope == '2' %}selected{% endif %}>Downsloping</option>
+                        </select>
+                    </div>
+
+                    <div class="field">
+                        <div class="field-top">
+                            <label for="id_ca">Major Vessels Colored by Fluoroscopy (0–3)</label>
+                            <button type="button" class="speak-btn" data-speak="Number of major blood vessels seen on a hospital fluoroscopy scan, from 0 to 3. Choose Unknown if you have not had this scan.">🔊 Listen</button>
+                        </div>
+                        <p class="field-help">Hospital imaging count (0–3).</p>
+                        <select id="id_ca" name="ca">
+                            <option value="unknown" {% if form_values.ca == 'unknown' or not form_values.ca %}selected{% endif %}>Unknown / No report</option>
+                            <option value="0" {% if form_values.ca == '0' %}selected{% endif %}>0</option>
+                            <option value="1" {% if form_values.ca == '1' %}selected{% endif %}>1</option>
+                            <option value="2" {% if form_values.ca == '2' %}selected{% endif %}>2</option>
+                            <option value="3" {% if form_values.ca == '3' %}selected{% endif %}>3</option>
+                        </select>
+                    </div>
+
+                    <div class="field">
+                        <div class="field-top">
+                            <label for="id_thal">Thalassemia Heart Scan (Thal)</label>
+                            <button type="button" class="speak-btn" data-speak="Thalassemia nuclear heart scan result. Choose Unknown if you have not had this scan.">🔊 Listen</button>
+                        </div>
+                        <p class="field-help">Nuclear stress scan blood-flow status.</p>
+                        <select id="id_thal" name="thal">
+                            <option value="unknown" {% if form_values.thal == 'unknown' or not form_values.thal %}selected{% endif %}>Unknown / No report</option>
+                            <option value="1" {% if form_values.thal == '1' %}selected{% endif %}>Normal</option>
+                            <option value="2" {% if form_values.thal == '2' %}selected{% endif %}>Fixed defect</option>
+                            <option value="3" {% if form_values.thal == '3' %}selected{% endif %}>Reversible defect</option>
+                        </select>
+                    </div>
+                </div>
+            </details>
+        </section>
+
+        <button type="submit" class="predict-btn">🔍 Run Heart Risk Screening</button>
     </form>
 
-    <!-- Results Section -->
-    {% if result %}
-    <div class="result">
-        <h3 class="{% if 'No' in result %}success{% else %}danger{% endif %}">{{ result }}</h3>
-        <p><strong>Risk Percentage:</strong> {{ risk }}%</p>
-        {% if hospital %}
-        <p><strong>Recommended Hospital:</strong> {{ hospital }}</p>
-        {% endif %}
-    </div>
-    {% endif %}
+</main>
 
-    {% if doctor and hospital %}
-    <div class="result">
-        <h3>🩺 Medical Recommendation</h3>
-        <p><strong>Recommended Doctor:</strong> {{ doctor }}</p>
-        <p><strong>Recommended Hospital:</strong> {{ hospital }}</p>
-    </div>
-    {% endif %}
+<script>
+(function () {
+    var formModeInput = document.getElementById("form-mode");
+    var btnGuided = document.getElementById("btn-guided");
+    var btnClinical = document.getElementById("btn-clinical");
+    var advancedSection = document.getElementById("advanced-section");
+    var advancedLabel = document.getElementById("advanced-toggle-label");
+    var modeDescription = document.getElementById("mode-description");
 
-    <!-- Footer Links -->
-    <div class="links">
-        <a href="/chatbot/">🤖 Talk to Health Assistant</a>
-        <a href="/logout/">🚪 Logout</a>
-    </div>
+    function setMode(mode) {
+        formModeInput.value = mode;
+        var isClinical = mode === "clinical";
+        btnGuided.classList.toggle("active", !isClinical);
+        btnClinical.classList.toggle("active", isClinical);
+        advancedSection.open = isClinical;
+        advancedLabel.textContent = isClinical ? "Expanded" : "Optional — Click to expand";
+        modeDescription.textContent = isClinical
+            ? "Showing all 13 clinical parameters openly."
+            : "Guided mode highlights everyday questions and hides advanced hospital test fields unless you open them.";
+    }
 
-</div>
+    btnGuided.addEventListener("click", function () { setMode("guided"); });
+    btnClinical.addEventListener("click", function () { setMode("clinical"); });
+
+    function speakText(text) {
+        if (!("speechSynthesis" in window)) {
+            alert("Audio read-aloud is not supported in this browser.");
+            return;
+        }
+        window.speechSynthesis.cancel();
+        var utterance = new SpeechSynthesisUtterance(text);
+        utterance.rate = 0.95;
+        window.speechSynthesis.speak(utterance);
+    }
+
+    document.querySelectorAll("[data-speak]").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+            speakText(btn.getAttribute("data-speak"));
+        });
+    });
+
+    document.getElementById("speak-page-btn").addEventListener("click", function () {
+        speakText(
+            "Heart Health Screening Dashboard. Start with Section 1: enter age, sex, chest discomfort, and whether walking causes chest pain. " +
+            "In Section 2, add blood pressure, cholesterol, or blood sugar if you know them, or leave them blank. " +
+            "If you do not have hospital ECG or scan reports, leave Section 3 set to Unknown, then select Run Heart Risk Screening."
+        );
+    });
+
+    document.getElementById("stop-speak-btn").addEventListener("click", function () {
+        if ("speechSynthesis" in window) {
+            window.speechSynthesis.cancel();
+        }
+    });
+})();
+</script>
+
 </body>
 </html>

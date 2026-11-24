@@ -1,43 +1,47 @@
 {% load static %}
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Login | Health Prediction</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login | CardioScreen AI</title>
     <link rel="stylesheet" href="{% static 'style.css' %}">
 </head>
-<body>
+<body class="app-bg">
 
-<div class="page-wrapper">
-
+<div class="auth-wrapper">
     <div class="card auth-card">
-        <h2>Login</h2>
-        <p class="moto">Welcome back</p>
+        <div class="brand" style="margin-bottom: 14px;">
+            <span class="dot"></span>
+            <span>CardioScreen AI</span>
+        </div>
+        <h2>Sign In</h2>
+        <p class="moto">Access the heart health screening dashboard and assistant.</p>
 
         <form method="post">
             {% csrf_token %}
 
             <div class="field">
-                <label>Username</label>
-                <input type="text" name="username" required>
+                <label for="id_username">Username</label>
+                <input id="id_username" type="text" name="username" placeholder="Enter your username" required>
             </div>
 
             <div class="field">
-                <label>Password</label>
-                <input type="password" name="password" required>
+                <label for="id_password">Password</label>
+                <input id="id_password" type="password" name="password" placeholder="Enter your password" required>
             </div>
 
             {% if error %}
-                <p class="error">{{ error }}</p>
+                <p class="error" role="alert">{{ error }}</p>
             {% endif %}
 
             <button class="predict-btn" type="submit">Login</button>
         </form>
 
         <p class="switch">
-            New user? <a href="/register/">Register here</a>
+            New user? <a href="{% url 'register' %}">Create an account</a>
         </p>
     </div>
-
 </div>
 
 </body>

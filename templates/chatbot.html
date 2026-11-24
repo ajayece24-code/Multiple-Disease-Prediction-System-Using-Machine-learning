@@ -1,156 +1,95 @@
 {% load static %}
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Health Assistant Chatbot</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Health Assistant | CardioScreen AI</title>
     <link rel="stylesheet" href="{% static 'style.css' %}">
-    <style>
-        /* Extra styling for new features */
-        .chat-body {
-            max-height: 500px;
-            overflow-y: auto;
-            padding: 15px;
-        }
-        .chat-message {
-            margin-bottom: 15px;
-            padding: 12px 16px;
-            border-radius: 10px;
-            line-height: 1.4;
-        }
-        .chat-message.bot {
-            background: #f1f5f9;
-            color: #0f172a;
-        }
-        .chat-message.user {
-            background: #0ea5e9;
-            color: #fff;
-            text-align: right;
-        }
-        .timestamp {
-            font-size: 11px;
-            color: #64748b;
-            margin-top: 4px;
-            display: block;
-        }
-        .typing {
-            font-style: italic;
-            color: #64748b;
-            margin: 10px 0;
-        }
-        .quick-replies {
-            display: flex;
-            gap: 10px;
-            margin: 15px 0;
-        }
-        .quick-replies button {
-            background: #e2e8f0;
-            border: none;
-            padding: 8px 12px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 13px;
-        }
-        .quick-replies button:hover {
-            background: #cbd5e1;
-        }
-        .chat-input {
-            display: flex;
-            gap: 10px;
-            padding: 12px;
-            border-top: 1px solid #e2e8f0;
-            background: #fff;
-        }
-        .chat-input input {
-            flex: 1;
-            padding: 12px;
-            border-radius: 8px;
-            border: 1px solid #cbd5e1;
-        }
-        .chat-input button {
-            background: #0ea5e9;
-            color: #fff;
-            border: none;
-            padding: 12px 18px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: 600;
-        }
-        .chat-input button:hover {
-            background: #0284c7;
-        }
-        .clear-chat {
-            text-align: center;
-            margin-top: 15px;
-        }
-        .clear-chat a {
-            font-size: 13px;
-            color: #dc2626;
-            text-decoration: none;
-        }
-    </style>
 </head>
+<body class="app-bg">
 
-<body class="chat-bg">
+<nav class="navbar">
+    <div class="navbar-inner">
+        <a href="{% url 'home' %}" class="brand">
+            <span class="dot"></span>
+            <span>CardioScreen AI</span>
+        </a>
+        <div class="nav-links">
+            <span class="user-pill">Signed in: <strong>{{ request.user.username }}</strong></span>
+            <a href="{% url 'home' %}">Screening</a>
+            <a href="{% url 'chatbot' %}" class="active">Health Assistant</a>
+            <a href="{% url 'logout' %}">Logout</a>
+        </div>
+    </div>
+</nav>
 
-<div class="chat-container">
-
-    <!-- Header -->
-    <div class="chat-header">
-        🤖 Health Assistant
-        <a href="/home/" class="back-link">← Back</a>
+<main class="chat-shell">
+    <div class="alert alert-disclaimer" role="note" style="margin-bottom: 16px;">
+        <strong>Health-Aid Disclaimer:</strong> Answers here are general heart-health and screening explanations, not a medical diagnosis. Seek emergency care for chest pain or shortness of breath.
     </div>
 
-    <!-- Chat Messages -->
-    <div class="chat-body">
+    <div class="chat-container">
+        <div class="chat-header">
+            <span>🤖 Health Screening Assistant</span>
+            <a href="{% url 'home' %}" class="back-link">← Back to Screening</a>
+        </div>
 
-        <!-- Bot welcome -->
-        <div class="chat-message bot">
-            Hello! 👋 I can help you with:
-            <ul>
-                <li>Blood Pressure</li>
-                <li>Cholesterol</li>
-                <li>Heart Disease</li>
-                <li>Exercise & lifestyle</li>
-            </ul>
-            <div class="quick-replies">
-                <button type="button">Blood Pressure</button>
-                <button type="button">Cholesterol</button>
-                <button type="button">Exercise Tips</button>
+        <div class="chat-body" id="chat-body">
+            <div class="chat-message bot">
+                Hello! 👋 Ask me anything about heart screening or everyday health habits:
+                <ul style="margin: 8px 0 0; padding-left: 18px;">
+                    <li>Blood pressure &amp; cholesterol targets</li>
+                    <li>Plain-language explanations of ECG, oldpeak, thal, or ca</li>
+                    <li>Chest pain warning signs, diet, sleep, stress &amp; exercise</li>
+                </ul>
+                <div class="quick-replies">
+                    <button type="button" data-msg="What is normal blood pressure?">Blood Pressure</button>
+                    <button type="button" data-msg="What should cholesterol be?">Cholesterol</button>
+                    <button type="button" data-msg="Give me exercise tips for heart health">Exercise Tips</button>
+                    <button type="button" data-msg="Explain ECG, oldpeak, thal, and ca in plain language">ECG &amp; Lab Terms</button>
+                    <button type="button" data-msg="Tips for diet, sleep, and stress">Diet &amp; Sleep</button>
+                </div>
             </div>
+
+            {% for item in chat_history %}
+            <div class="chat-message {{ item.sender }}">
+                {{ item.text }}
+                {% if item.time %}<span class="timestamp">{{ item.time }}</span>{% endif %}
+            </div>
+            {% endfor %}
         </div>
 
-        {% if reply %}
-        <div class="chat-message user">
-            {{ request.POST.message }}
-            <span class="timestamp">{{ timestamp }}</span>
+        <form method="post" class="chat-input" id="chat-form">
+            {% csrf_token %}
+            <input type="text" name="message" id="chat-message-input" placeholder="Ask about BP, cholesterol, exercise, ECG, or diet..." required aria-label="Chat message">
+            <button type="submit">Send</button>
+        </form>
+
+        <div class="clear-chat">
+            <a href="{% url 'clear_chat' %}">🗑️ Clear Chat History</a>
         </div>
-
-        <div class="chat-message bot">
-            {{ reply }}
-            <span class="timestamp">{{ bot_time }}</span>
-        </div>
-        {% endif %}
-
-        <!-- Typing indicator -->
-        {% if typing %}
-        <div class="typing">Bot is typing...</div>
-        {% endif %}
-
     </div>
+</main>
 
-    <!-- Input -->
-    <form method="post" class="chat-input">
-        {% csrf_token %}
-        <input type="text" name="message" placeholder="Ask about BP, cholesterol..." required aria-label="Chat message">
-        <button type="submit">Send</button>
-    </form>
+<script>
+(function () {
+    var form = document.getElementById("chat-form");
+    var input = document.getElementById("chat-message-input");
+    var chatBody = document.getElementById("chat-body");
 
-    <!-- Clear chat -->
-    <div class="clear-chat">
-        <a href="/chatbot/clear/">🗑️ Clear Chat</a>
-    </div>
+    document.querySelectorAll(".quick-replies button").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+            input.value = btn.getAttribute("data-msg") || btn.textContent.trim();
+            form.submit();
+        });
+    });
 
-</div>
+    if (chatBody) {
+        chatBody.scrollTop = chatBody.scrollHeight;
+    }
+})();
+</script>
 
 </body>
 </html>
